@@ -1,4 +1,4 @@
-use rltk::{GameState, Rltk, RGB};
+use rltk::{GameState, Rltk, VirtualKeyCode, RGB};
 use specs::prelude::*;
 use specs_derive::Component;
 use std::cmp::{max, min};
@@ -18,6 +18,32 @@ struct Renderable {
 
 #[derive(Component)]
 struct LeftMover {}
+
+#[derive(Component)]
+struct Player {}
+
+fn try_move_player(dx: i32, dy: i32, ecs: &mut World) {
+    let mut positions = ecs.write_storage::<Position>();
+    let players = ecs.write_storage::<Player>();
+
+    for (_player, pos) in (&players, &mut positions).join() {
+        pos.x = min(79, max(0, pos.x + dx));
+        pos.y = min(49, max(0, pos.y + dy));
+    }
+}
+
+fn player_input(gs: &mut State, ctx: &mut Rltk) {
+    match ctx.key {
+        None => {}
+        Some(key) => match key {
+            VirtualKeyCode::Left => try_move_player(-1, 0, &mut gs.ecs),
+            VirtualKeyCode::Right => try_move_player(1, 0, &mut gs.ecs),
+            VirtualKeyCode::Up => try_move_player(0, -1, &mut gs.ecs),
+            VirtualKeyCode::Down => try_move_player(0, 1, &mut gs.ecs),
+            _ => {}
+        },
+    }
+}
 
 struct LeftWalker {}
 
@@ -50,6 +76,7 @@ impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
 
+        player_input(self, ctx);
         self.run_systems();
 
         let positions = self.ecs.read_storage::<Position>();
@@ -67,6 +94,7 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<LeftMover>();
+    gs.ecs.register::<Player>();
     gs.ecs
         .create_entity()
         .with(Position { x: 40, y: 25 })
@@ -75,6 +103,7 @@ fn main() -> rltk::BError {
             fg: RGB::named(rltk::YELLOW),
             bg: RGB::named(rltk::BLACK),
         })
+        .with(Player {})
         .build();
 
     for i in 0..10 {
