@@ -1,4 +1,6 @@
-use rltk::{Rltk, RGB};
+use std::cmp::{max, min};
+
+use rltk::{RandomNumberGenerator, Rltk, RGB};
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum TileType {
@@ -6,6 +8,7 @@ pub enum TileType {
     Floor,
 }
 
+#[derive(Clone, Copy)]
 pub struct Rect {
     pub x1: i32,
     pub x2: i32,
@@ -47,11 +50,49 @@ pub fn xy_idx(x: i32, y: i32) -> usize {
 pub fn new_map_rooms_and_corridors() -> Vec<TileType> {
     let mut map = vec![TileType::Wall; 80 * 50];
 
-    let room1 = Rect::new(20, 15, 10, 15);
-    let room2 = Rect::new(35, 15, 10, 15);
-    apply_room_to_map(&room1, &mut map);
-    apply_room_to_map(&room2, &mut map);
+    let mut rooms: Vec<Rect> = Vec::new();
+    const MAX_ROOMS: i32 = 30;
+    const MIN_SIZE: i32 = 6;
+    const MAX_SIZE: i32 = 10;
+
+    let mut rng = RandomNumberGenerator::new();
+
+    for _ in 0..MAX_ROOMS {
+        let w = rng.range(MIN_SIZE, MAX_SIZE);
+        let h = rng.range(MIN_SIZE, MAX_SIZE);
+        let x = rng.roll_dice(1, 80 - w - 1) - 1;
+        let y = rng.roll_dice(1, 50 - h - 1) - 1;
+        let new_room = Rect::new(x, y, w, h);
+        let mut ok = true;
+        for other_room in rooms.iter() {
+            if new_room.intersect(other_room) {
+                ok = false
+            }
+        }
+        if ok {
+            apply_room_to_map(&new_room, &mut map);
+            rooms.push(new_room);
+        }
+    }
+
     map
+}
+fn apply_horizontal_tunnel(map: &mut [TileType], x1: i32, x2: i32, y: i32) {
+    for x in min(x1, x2)..=max(x1, x2) {
+        let idx = xy_idx(x, y);
+        if idx > 0 && idx < 80 * 50 {
+            map[idx as usize] = TileType::Floor;
+        }
+    }
+}
+
+fn apply_vertical_tunnel(map: &mut [TileType], y1: i32, y2: i32, x: i32) {
+    for y in min(y1, y2)..=max(y1, y2) {
+        let idx = xy_idx(x, y);
+        if idx > 0 && idx < 80 * 50 {
+            map[idx as usize] = TileType::Floor;
+        }
+    }
 }
 
 /// Makes a map with solid boundaries and 400 randomly placed walls. No guarantees that it won't
