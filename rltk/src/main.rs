@@ -47,7 +47,6 @@ fn main() -> rltk::BError {
     let mut gs = State { ecs: World::new() };
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
-    gs.ecs.register::<LeftMover>();
     gs.ecs.register::<Player>();
     gs.ecs.register::<Viewshed>();
     let map: Map = Map::new_map_rooms_and_corridors();
@@ -72,17 +71,5 @@ fn main() -> rltk::BError {
         })
         .build();
 
-    for i in 0..10 {
-        gs.ecs
-            .create_entity()
-            .with(Position { x: i * 7, y: 20 })
-            .with(Renderable {
-                glyph: rltk::to_cp437('☺'),
-                fg: RGB::named(rltk::RED),
-                bg: RGB::named(rltk::BLACK),
-            })
-            .with(LeftMover {})
-            .build();
-    }
     rltk::main_loop(context, gs)
 }
