@@ -1,9 +1,7 @@
 use std::cmp::{max, min};
 
 use rltk::{Algorithm2D, BaseMap, Point, RandomNumberGenerator, Rltk, RGB};
-use specs::{World, WorldExt};
-
-use crate::{Player, Viewshed};
+use specs::World;
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum TileType {
@@ -43,10 +41,11 @@ pub struct Map {
     pub rooms: Vec<Rect>,
     pub width: i32,
     pub height: i32,
+    pub revealed_tiles: Vec<bool>,
 }
 
 impl Map {
-    pub fn idx_xy(&self, idx: usize) -> (i32, i32) {
+    pub fn idx_xy(idx: usize) -> (i32, i32) {
         let y = idx as i32 / 80;
         let x = idx as i32 % 80;
         (x, y)
@@ -88,6 +87,7 @@ impl Map {
             rooms: Vec::new(),
             width: 80,
             height: 50,
+            revealed_tiles: vec![false; 80 * 50],
         };
 
         const MAX_ROOMS: i32 = 30;
@@ -141,69 +141,31 @@ impl BaseMap for Map {
 }
 
 pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
-    let mut viewsheds = ecs.write_storage::<Viewshed>();
-    let mut players = ecs.write_storage::<Player>();
     let map = ecs.fetch::<Map>();
 
-    for (_player, viewshed) in (&mut players, &mut viewsheds).join() {
-        let mut x = 0;
-        let mut y = 0;
-
-        for tile in map.tiles.iter() {
-            // Render a tile depending upon the tile type
-            let pt = Point::new(x, y);
-            if viewshed.visible_tiles.contains(&pt) {
-                match tile {
-                    TileType::Floor => {
-                        ctx.set(
-                            x,
-                            y,
-                            RGB::from_f32(0.5, 0.5, 0.5),
-                            RGB::from_f32(0., 0., 0.),
-                            rltk::to_cp437('.'),
-                        );
-                    }
-                    TileType::Wall => {
-                        ctx.set(
-                            x,
-                            y,
-                            RGB::from_f32(0.0, 1.0, 0.0),
-                            RGB::from_f32(0., 0., 0.),
-                            rltk::to_cp437('#'),
-                        );
-                    }
-                }
-            }
-
-            // Move the coordinates
-            x += 1;
-            if x > 79 {
-                x = 0;
-                y += 1;
-            }
-        }
-    }
-
     for (idx, tile) in map.tiles.iter().enumerate() {
-        let (x, y) = map.idx_xy(idx);
-        match tile {
-            TileType::Floor => {
-                ctx.set(
-                    x,
-                    y,
-                    RGB::from_f32(0.5, 0.5, 0.5),
-                    RGB::from_f32(0.0, 0.0, 0.0),
-                    rltk::to_cp437('.'),
-                );
-            }
-            TileType::Wall => {
-                ctx.set(
-                    x,
-                    y,
-                    RGB::from_f32(0.0, 1.0, 0.0),
-                    RGB::from_f32(0.0, 0.0, 0.0),
-                    rltk::to_cp437('#'),
-                );
+        // Render a tile depending upon the tile type
+        if map.revealed_tiles[idx] {
+            let (x, y) = Map::idx_xy(idx);
+            match tile {
+                TileType::Floor => {
+                    ctx.set(
+                        x,
+                        y,
+                        RGB::from_f32(0.5, 0.5, 0.5),
+                        RGB::from_f32(0., 0., 0.),
+                        rltk::to_cp437('.'),
+                    );
+                }
+                TileType::Wall => {
+                    ctx.set(
+                        x,
+                        y,
+                        RGB::from_f32(0.0, 1.0, 0.0),
+                        RGB::from_f32(0., 0., 0.),
+                        rltk::to_cp437('#'),
+                    );
+                }
             }
         }
     }
