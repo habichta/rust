@@ -1,4 +1,5 @@
 use super::{Map, Player, Position, State, TileType};
+use crate::Viewshed;
 use rltk::{Rltk, VirtualKeyCode};
 use specs::prelude::*;
 use std::cmp::{max, min};
