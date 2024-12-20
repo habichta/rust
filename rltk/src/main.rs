@@ -40,8 +40,13 @@ impl State {
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
-        player_input(self, ctx);
-        self.run_systems();
+
+        if self.runstate == RunState::Running {
+            self.run_systems();
+            self.runstate = RunState::Paused;
+        } else {
+            self.runstate = player_input(self, ctx);
+        }
 
         draw_map(&self.ecs, ctx);
         let positions = self.ecs.read_storage::<Position>();
@@ -67,6 +72,8 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Player>();
     gs.ecs.register::<Viewshed>();
+    gs.ecs.register::<Monster>();
+
     let map: Map = Map::new_map_rooms_and_corridors();
     let mut rng = rltk::RandomNumberGenerator::new();
     for room in map.rooms.iter().skip(1) {
