@@ -46,13 +46,22 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn idx_xy(idx: usize) -> (i32, i32) {
-        let y = idx as i32 / 80;
-        let x = idx as i32 % 80;
+    pub fn xy_idx(&self, x: i32, y: i32) -> usize {
+        (y as usize * self.width as usize) + x as usize
+    }
+
+    pub fn idx_xy(&self, idx: usize) -> (i32, i32) {
+        let y = idx as i32 / self.width;
+        let x = idx as i32 % self.width;
         (x, y)
     }
-    pub fn xy_idx(&self, x: i32, y: i32) -> usize {
-        (y as usize * 80) + x as usize
+
+    fn is_exit_valid(&self, x: i32, y: i32) -> bool {
+        if x < 1 || x > self.width - 1 || y < 1 || y > self.height - 1 {
+            return false;
+        }
+        let idx = self.xy_idx(x, y);
+        self.tiles[idx as usize] != TileType::Wall
     }
 
     fn apply_room_to_map(&mut self, room: &Rect) {
@@ -140,6 +149,34 @@ impl BaseMap for Map {
     fn is_opaque(&self, idx: usize) -> bool {
         self.tiles[idx as usize] == TileType::Wall
     }
+    fn get_pathing_distance(&self, idx1: usize, idx2: usize) -> f32 {
+        let (x1, y1) = self.idx_xy(idx1);
+        let (x2, y2) = self.idx_xy(idx2);
+        let p1 = Point::new(x1, y1);
+        let p2 = Point::new(x2, y2);
+        rltk::DistanceAlg::Pythagoras.distance2d(p1, p2)
+    }
+
+    fn get_available_exits(&self, idx: usize) -> rltk::SmallVec<[(usize, f32); 10]> {
+        let mut exits = rltk::SmallVec::new();
+        let (x, y) = self.idx_xy(idx);
+        let w = self.width as usize;
+
+        if self.is_exit_valid(x - 1, y) {
+            exits.push((idx - 1, 1.0))
+        };
+        if self.is_exit_valid(x + 1, y) {
+            exits.push((idx + 1, 1.0))
+        };
+        if self.is_exit_valid(x, y - 1) {
+            exits.push((idx - w, 1.0)) // in our array, change in y is actually -width w
+        };
+        if self.is_exit_valid(x, y + 1) {
+            exits.push((idx + w, 1.0))
+        };
+
+        exits
+    }
 }
 
 pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
@@ -148,7 +185,7 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
     for (idx, tile) in map.tiles.iter().enumerate() {
         // Render a tile depending upon the tile type
         if map.revealed_tiles[idx] {
-            let (x, y) = Map::idx_xy(idx);
+            let (x, y) = map.idx_xy(idx);
             let glyph;
             let mut fg;
             match tile {

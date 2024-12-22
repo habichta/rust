@@ -1,4 +1,4 @@
-use rltk::{GameState, Rltk, RGB};
+use rltk::{GameState, Point, Rltk, RGB};
 use specs::prelude::*;
 
 mod components;
@@ -73,19 +73,24 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Player>();
     gs.ecs.register::<Viewshed>();
     gs.ecs.register::<Monster>();
+    gs.ecs.register::<Name>();
+    gs.ecs.register::<PlayerName>();
 
     let map: Map = Map::new_map_rooms_and_corridors();
     let mut rng = rltk::RandomNumberGenerator::new();
-    for room in map.rooms.iter().skip(1) {
+    for (i, room) in map.rooms.iter().skip(1).enumerate() {
         let (x, y) = room.center();
         let roll = rng.roll_dice(1, 2);
+        let name: String;
         let glyph: rltk::FontCharType;
 
         match roll {
             1 => {
+                name = "Goblin".to_string();
                 glyph = rltk::to_cp437('g');
             }
             _ => {
+                name = "Orc".to_string();
                 glyph = rltk::to_cp437('o');
             }
         }
@@ -103,10 +108,14 @@ fn main() -> rltk::BError {
                 dirty: true,
             })
             .with(Monster {})
+            .with(Name {
+                name: format!("{} #{}", &name, i),
+            })
             .build();
     }
 
     let (player_x, player_y) = map.rooms[0].center();
+    let player_name = "Player".to_string();
     gs.ecs
         .create_entity()
         .with(Position {
@@ -119,6 +128,9 @@ fn main() -> rltk::BError {
             bg: RGB::named(rltk::BLACK),
         })
         .with(Player {})
+        .with(PlayerName {
+            name: player_name.clone(),
+        })
         .with(Viewshed {
             visible_tiles: Vec::new(),
             range: 8,
@@ -127,5 +139,8 @@ fn main() -> rltk::BError {
         .build();
 
     gs.ecs.insert(map);
+    gs.ecs.insert(PlayerName { name: player_name });
+    gs.ecs.insert(Point::new(player_x, player_y));
+
     rltk::main_loop(context, gs)
 }

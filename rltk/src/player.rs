@@ -1,6 +1,6 @@
 use super::{Map, Player, Position, RunState, State, TileType};
 use crate::Viewshed;
-use rltk::{Rltk, VirtualKeyCode};
+use rltk::{Point, Rltk, VirtualKeyCode};
 use specs::prelude::*;
 use std::cmp::{max, min};
 
@@ -16,6 +16,9 @@ pub fn try_move_player(dx: i32, dy: i32, ecs: &mut World) {
             pos.x = min(79, max(0, pos.x + dx));
             pos.y = min(49, max(0, pos.y + dy));
             viewshed.dirty = true;
+            let mut ppos = ecs.write_resource::<Point>();
+            ppos.x = pos.x;
+            ppos.y = pos.y;
         }
     }
 }
