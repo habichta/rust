@@ -37,3 +37,6 @@ pub struct Name {
 pub struct PlayerName {
     pub name: String,
 }
+
+#[derive(Component, Debug)]
+pub struct BlocksTile {}
